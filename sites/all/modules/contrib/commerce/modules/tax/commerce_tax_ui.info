@@ -1,0 +1,13 @@
+name = Tax UI
+description = Provides a UI for creating simple tax types and rates.
+package = Commerce
+dependencies[] = commerce_ui
+dependencies[] = commerce_tax
+core = 7.x
+
+; Information added by drupal.org packaging script on 2011-02-27
+version = "7.x-1.0-beta2"
+core = "7.x"
+project = "commerce"
+datestamp = "1298816467"
+
