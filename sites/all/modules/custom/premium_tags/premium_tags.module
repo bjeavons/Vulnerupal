@@ -1,0 +1,349 @@
+<?php
+
+/**
+ * @file
+ * Allow users to create a taxonomy term and use it automatically for content.
+ */
+
+/**
+ * Implements hook_permission().
+ */
+function premium_tags_permission() {
+  return array(
+    'create and edit term' => array(
+      'title' => t('Ceate and edit tags'),
+      'description' => t('Create and edit tags'),
+    ),
+    'delete own term' => array(
+      'title' => t('Delete own tags'),
+      'description' => t('Delete own tags'),
+    ),
+    'create additional terms' => array(
+      'title' => t('Create additional tags'),
+      'description' => t('Create additional terms'),
+    ),
+    'administer premium_tags' => array(
+      'title' => t('Administer Premium Tags'),
+      'description' => t('Administer premium_tags'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_menu().
+ */
+function premium_tags_menu() {
+  $items['user/%user/tags'] = array(
+    'title' => 'Tags',
+    'title callback' => '_premium_tags_menu_item_title',
+    'title arguments' => array(1),
+    'page callback' => '_premium_tags_user_tags',
+    'page arguments' => array(1),
+    'access callback' => 'premium_tags_term_access',
+    'access arguments' => array(1),
+    'file' => 'premium_tags.inc',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 20,
+  );
+  $items['user/%user/tags/add'] = array(
+    'title' => 'Add tags',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('premium_tags_term_form', 1),
+    'access callback' => 'premium_tags_term_add_access',
+    'access arguments' => array(1),
+    'file' => 'premium_tags.inc',
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['user/%user/tags/edit/%premium_tags_term'] = array(
+    'title' => 'Edit tags',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('premium_tags_term_form', 1, 4),
+    'access callback' => 'premium_tags_term_access',
+    'access arguments' => array(1),
+    'file' => 'premium_tags.inc',
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['user/%user/tags/delete/%premium_tags_term'] = array(
+    'title' => 'Delete tags',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('premium_tags_term_delete', 1, 4),
+    'access callback' => 'premium_tags_term_delete_access',
+    'access arguments' => array(1, 4),
+    'file' => 'premium_tags.inc',
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['user/%user/list-tags'] = array(
+    'title' => 'Tags',
+    'page callback' => 'premium_tags_display',
+    'page arguments' => array(1),
+    'access callback' => 'premium_tags_access_display',
+    'access arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+  );
+
+  return $items;
+}
+
+function _premium_tags_menu_item_title($account) {
+  $tids = premium_tags_tids($account->uid);
+  if (empty($tids)) {
+    return 'Create tags';
+  }
+  elseif (user_access('create additional terms')) {
+    return 'Manage tags';
+  }
+  else {
+    return 'Edit tags';
+  }
+}
+
+/**
+ * Menu wildcard item load - %premium_tags_term
+ */
+function premium_tags_term_load($tid) {
+  return taxonomy_term_load($tid);
+}
+
+/**
+ * User Access function - determines if the user can create or edit the term.
+ *
+ * @param $account This is the user in the url.
+ * @return bool If the current logged in user can edit or create a term for the $account.
+ */
+function premium_tags_term_access($account) {
+  global $user;
+  $vid = variable_get('premium_tags_vocabulary', FALSE);
+  if ($account->uid != $user->uid) {
+    // Trying to edit another's term.
+    return $vid && user_access('administer premium_tags');
+  }
+  return $vid && user_access('create and edit term');
+}
+
+/**
+ * This indicates if you are allowed to change the given tags's comment settings.
+ */
+function premium_tags_access_term($term) {
+  global $user;
+  $access = FALSE;
+  if (user_access('administer premium_tags')) {
+    $access = TRUE;
+  }
+  else if (user_access('create and edit term')) {
+    $existing = db_query("SELECT uid from {premium_tags} WHERE tid = :tid AND uid = :uid", array(':tid' => $term->tid, ':uid' => $user->uid))
+      ->fetchField();
+    if ($existing) {
+      $access = TRUE;
+    }
+  }
+  return $access;
+}
+
+/**
+ * Check if user has access to delete term or administer taxonomy.
+ */
+function premium_tags_term_delete_access($account, $term) {
+  $tids = premium_tags_tids($account->uid);
+  if (in_array($term->tid, $tids) && user_access('delete own term')) {
+    return TRUE;
+  }
+  return user_access('administer taxonomy');
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function premium_tags_form_alter(&$form, $form_state, $form_id) {
+  // Provide option for premium_tags on vocabularies.
+  if ($form_id == 'taxonomy_form_vocabulary') {
+    $vid = variable_get('premium_tags_vocabulary', FALSE);
+    $form['settings']['premium_tags'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Enable Premium Tags'),
+      '#default_value' => $vid == $form['vid']['#value'] ? $vid : 0,
+      '#description' => t('Check this box to enable Premium Tags for this vocabulary. Enabling will remove premium_tags from another vocabulary if set.'),
+    );
+    $form['#submit'][] = 'premium_tags_vocabulary_submit';
+  }
+  // Take control of premium_tags vocabulary control on the node form.
+  elseif (isset($form['type']['#value']) && $form['type']['#value'] . '_node_form' == $form_id) {
+    $vid = variable_get('premium_tags_vocabulary', FALSE);
+    if (!$vid) {
+      return;
+    }
+    foreach (field_info_instances('node', $form['type']['#value']) as $name => $field) {
+      $field_info = field_info_field($name);
+      if ($field_info['type'] == 'taxonomy_term_reference' && isset($field_info['settings']['allowed_values'][0]['vocabulary'])) {
+        $vocabulary = taxonomy_vocabulary_machine_name_load($field_info['settings']['allowed_values'][0]['vocabulary']);
+        if ($vocabulary->vid == $vid) {
+          if (user_access('create additional terms')) {
+            // Limit form options.
+            $tids = premium_tags_tids($form['uid']['#value']);
+            // @todo handle other languages.
+            $form[$name][LANGUAGE_NONE]['#options'] = _premium_tags_form_options($form[$name][LANGUAGE_NONE]['#options'], $tids);
+          }
+          else {
+            // Unset term selection, term is set in hook_nodeapi_presave().
+            unset($form[$name]);
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Returns FAPI options - given an array of term_ids, return the $options which match those term_ids.
+ *
+ * @param array $options FAPI list of taxonomy term options.
+ * @param array $tids array of term ids to include
+ * @return array List of taxonomy term options including only $tids.
+ */
+function _premium_tags_form_options($options, $tids) {
+  $new_options = array('_none' => 'N/A');
+  
+  foreach ($options as $key => $option) {
+    if (is_numeric($key)) {
+      if (in_array($key, $tids)) {
+        $new_options[$key] = $option;
+      }
+    }
+  }
+  return $new_options;
+}
+
+/**
+ * Process admin vocabulary form.
+ */
+function premium_tags_vocabulary_submit($form, &$form_state) {
+  $vid = variable_get('premium_tags_vocabulary', FALSE);
+  if (isset($form_state['values']['premium_tags']) && $form_state['values']['premium_tags'] == 1) {
+    variable_set('premium_tags_vocabulary', $form_state['values']['vid']);
+  }
+  elseif ($form_state['values']['premium_tags'] == 0 && $vid == $form_state['values']['vid']) {
+    // Only delete if premium_tags is empty and we are submitting a vocab that did have it enabled.
+    variable_del('premium_tags_vocabulary');
+  }
+}
+
+/**
+ * Implements hook_node_presave().
+ */
+function premium_tags_node_presave($node) {
+  $vid = variable_get('premium_tags_vocabulary', FALSE);
+  if ($vid && !user_access('create additional terms')) {
+    // Set node properties of premium_tags fields.
+    foreach (field_info_instances('node', $node->type) as $name => $field) {
+      $field_info = field_info_field($name);
+      if ($field_info['type'] == 'taxonomy_term_reference' && isset($field_info['settings']['allowed_values'][0]['vocabulary'])) {
+        $vocabulary = taxonomy_vocabulary_machine_name_load($field_info['settings']['allowed_values'][0]['vocabulary']);
+        if ($vocabulary->vid == $vid) {
+          $tids = premium_tags_tids($node->uid);
+          $delta = 0;
+          foreach ($tids as $tid) {
+            $node->{$name}[LANGUAGE_NONE][$delta]['tid'] = $tid;
+            $delta++;
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_taxonomy_term_delete().
+ */
+function premium_tags_taxonomy_term_delete($term) {
+  // If this term is an premium_tags delete the record.
+  db_delete('premium_tags')->condition('tid', $term->tid)->execute();
+}
+
+/**
+ * Create association between user and term.
+ */
+function premium_tags_create($uid, $tid, $status = 1) {
+  $record = array(
+    'uid' => $uid,
+    'tid' => $tid,
+    'status' => $status,
+  );
+  $return = drupal_write_record('premium_tags', $record);
+  module_invoke_all('premium_tags_create', $tid, $uid);
+  return $return;
+}
+
+/**
+ * Delete an association.
+ */
+function premium_tags_delete($uid, $tid) {
+  module_invoke_all('premium_tags_delete', $tid, $uid);
+  db_delete('premium_tags')
+    ->condition('uid', $uid)
+    ->condition('tid', $tid)
+    ->execute();
+}
+
+/**
+ * Returns term ids assigned to a user id.
+ */
+function premium_tags_tids($uid, $status = 1) {
+  $tids = array();
+  $result = db_query("SELECT tid FROM {premium_tags} WHERE uid = :uid and status = :status", array(':uid' => $uid, ':status' => $status));
+  foreach ($result as $record) {
+    $tids[$record->tid] = $record->tid;
+  }
+  return $tids;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function premium_tags_theme($existing, $type, $theme, $path) {
+  return array(
+    'premium_tags_users_form' => array(
+      'render element' => 'form',
+    ),
+  );
+}
+
+/**
+ * Redirects the user viewing to this account's tags.
+ */
+function premium_tags_display($account) {
+  $header = array(t('Tags'), t('Description'));
+  $result = db_query("SELECT tid FROM {premium_tags} WHERE uid = :uid AND status = :status", array(':uid' => $account->uid, ':status' => 1));
+  $rows = array();
+  foreach ($result as $record) {
+    $term = taxonomy_term_load($record->tid);
+    $rows[] = array(
+      'data' => array(l($term->name, 'taxonomy/term/' . $term->tid), $term->description),
+      'id' => 'uid-' . $account->uid,
+    );
+  }
+  if (count($rows) == 0) {
+    $rows[] = array(array(
+        'data' => t('You do not have any Permium tags.'),
+        'colspan' => 2,
+        'id' => 'norecords',
+      ));
+  }
+  if (count($rows) == 1) {
+    drupal_goto("taxonomy/term/" . $term->tid);
+  }
+  return theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => array('id' => 'usertags')));
+}
+
+/**
+ * Checks to see if this account has a tags - if they don't, then we just don't show this tab.
+ */
+function premium_tags_access_display($account) {
+  $tid = db_query("SELECT tid FROM {premium_tags} WHERE uid = :uid AND status = :status", array(':uid' => $account->uid, ':status' => 1))
+    ->fetchField();
+  if (!empty($tid)) {
+    return user_access('access content');
+  }
+  return FALSE;
+}
