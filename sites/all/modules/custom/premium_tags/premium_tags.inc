@@ -76,6 +76,15 @@ function premium_tags_term_form($form, &$form_state, $user, $term = array()) {
     '#default_value' => !empty($term->description) ? $term->description : '',
     '#description' => t('A description of your tag.'),
   );
+  if (module_exists('path')) {
+    $alias = path_load(array('source' => 'taxonomy/term/' . $term->tid));
+    $form['alias'] = array(
+      '#type' => 'textfield',
+      '#title' => t('URL Alias'),
+      '#description' => t('Optional URL alias for your tag.'),
+      '#default_value' => !empty($alias) ? $alias['alias'] : '',
+    );
+  }
 
   $form['uid'] = array(
     '#type' => 'value',
@@ -123,11 +132,28 @@ function premium_tags_term_form_submit($form, &$form_state) {
   switch (taxonomy_term_save($term)) {
     case SAVED_NEW:
       if (premium_tags_create($form_state['values']['uid'], $term->tid) == SAVED_NEW) {
-        drupal_set_message(t('%term created.', array('%term' => $term->name)));
+        // Save the alias.
+        if (module_exists('path') && isset($form_state['values']['alias'])) {
+          $path = array(
+            'source' => 'taxonomy/term/' . $term->tid,
+            'alias' => $form_state['values']['alias'],
+          );
+          path_save($path);
+        }
+        drupal_set_message(t('%term created', array('%term' => $term->name)));
       }
       break;
     case SAVED_UPDATED:
-      drupal_set_message(t('%term updated.', array('%term' => $term->name)));
+      if (module_exists('path')) {
+        // Delete any previous alias and save new one.
+        $path = array(
+          'source' => 'taxonomy/term/' . $term->tid,
+        );
+        path_delete($path);
+        $path['alias'] = $form_state['values']['alias'];
+        path_save($path);
+      }
+      drupal_set_message(t('%term updated', array('%term' => $term->name)));
       break;
   }
 }
