@@ -212,7 +212,7 @@ function premium_tags_term_delete_submit($form, &$form_state) {
 function _premium_tags_unassociated($terms) {
   $sql = "SELECT uid FROM {premium_tags} WHERE tid = :tid";
   foreach ($terms as $term) {
-    $data = db_query($sql, array(':tid' => $term->tid))->fetch();
+    $data = db_query("SELECT uid FROM {premium_tags} WHERE tid = $term->tid")->fetch();
     if ($data === FALSE) {
       // No uid for this term.
       return $term->tid;

@@ -133,7 +133,7 @@ function premium_tags_access_term($term) {
     $access = TRUE;
   }
   else if (user_access('create and edit term')) {
-    $existing = db_query("SELECT uid from {premium_tags} WHERE tid = :tid AND uid = :uid", array(':tid' => $term->tid, ':uid' => $user->uid))
+    $existing = db_query("SELECT uid from {premium_tags} WHERE tid = $term->tid AND uid = $user->uid")
       ->fetchField();
     if ($existing) {
       $access = TRUE;
@@ -291,7 +291,7 @@ function premium_tags_delete($uid, $tid) {
  */
 function premium_tags_tids($uid, $status = 1) {
   $tids = array();
-  $result = db_query("SELECT tid FROM {premium_tags} WHERE uid = :uid and status = :status", array(':uid' => $uid, ':status' => $status));
+  $result = db_query("SELECT tid FROM {premium_tags} WHERE uid = $uid and status = $status");
   foreach ($result as $record) {
     $tids[$record->tid] = $record->tid;
   }
@@ -314,7 +314,7 @@ function premium_tags_theme($existing, $type, $theme, $path) {
  */
 function premium_tags_display($account) {
   $header = array(t('Tags'), t('Description'));
-  $result = db_query("SELECT tid FROM {premium_tags} WHERE uid = :uid AND status = :status", array(':uid' => $account->uid, ':status' => 1));
+  $result = db_query("SELECT tid FROM {premium_tags} WHERE uid = $account->uid AND status = 1");
   $rows = array();
   foreach ($result as $record) {
     $term = taxonomy_term_load($record->tid);
@@ -340,7 +340,7 @@ function premium_tags_display($account) {
  * Checks to see if this account has a tags - if they don't, then we just don't show this tab.
  */
 function premium_tags_access_display($account) {
-  $tid = db_query("SELECT tid FROM {premium_tags} WHERE uid = :uid AND status = :status", array(':uid' => $account->uid, ':status' => 1))
+  $tid = db_query("SELECT tid FROM {premium_tags} WHERE uid = $account->uid AND status = 1")
     ->fetchField();
   if (!empty($tid)) {
     return user_access('access content');
