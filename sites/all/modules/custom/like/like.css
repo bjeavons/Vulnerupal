@@ -1,0 +1,21 @@
+div.like-widget {
+  padding: 0.2em 0.2em 0.6em;
+  border: 1px #23AEFF solid;
+  width: 4em;
+  margin-bottom: 10px;
+  text-align: center;
+  line-height: 1.25em;
+}
+div.like-widget a {
+  text-decoration: none;
+}
+div.like-widget .like-score {
+  padding-top: 0.4em;
+  font-size: 150%;
+}
+div.like-widget .like-vote a {
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+}

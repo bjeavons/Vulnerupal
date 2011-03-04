@@ -1,0 +1,33 @@
+<?php
+// $Id: like.install,v 1.1.4.1 2008/09/07 22:14:32 chill35 Exp $
+// @file 
+/**
+ * Implementation of hook_install().
+ */
+function like_install() {
+  // Create tables.
+  drupal_install_schema('like');
+}
+/**
+ * Implementation of hook_schema().
+ */
+function like_schema() {
+  return array();
+}
+/**
+ * Implementation of hook_uninstall().
+ */
+function like_uninstall() {
+  // Remove tables.
+  drupal_uninstall_schema('like');
+}
+
+/**
+ * Upgrade to using VotingAPI 2.
+ * 
+ */
+function fivestar_update_6200() {
+  $ret = array();
+  // db_drop_table($ret, 'like');
+  return $ret;
+}
