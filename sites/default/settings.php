@@ -178,21 +178,6 @@
  *   );
  * @endcode
  */
-$databases = array (
-  'default' => 
-  array (
-    'default' => 
-    array (
-      'database' => 'vulnd7',
-      'username' => 'vulnd7',
-      'password' => 'p4ss',
-      'host' => 'localhost',
-      'port' => '',
-      'driver' => 'mysql',
-      'prefix' => '',
-    ),
-  ),
-);
 
 /**
  * Access control for update.php script.
@@ -458,3 +443,5 @@ ini_set('session.cookie_lifetime', 2000000);
  * Remove the leading hash signs to disable.
  */
 # $conf['allow_authorize_operations'] = FALSE;
+
+include_once('settings.local.php');
