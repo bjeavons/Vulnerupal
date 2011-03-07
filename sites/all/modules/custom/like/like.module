@@ -228,19 +228,18 @@ function like_jquery_widget($node, $teaser) {
 }
 
 /**
-* Implements of hook_nodeapi().
+* Implements hook_nodeapi().
 */
 function like_node_view($node, $buildmode, $langcode) {
-       if (in_array($node->type, variable_get('like_nodetypes', array('article')))) {
-           $teaser = variable_get('like_in_teaser', 0);
-           $full  = variable_get('like_in_full_view', 1);
-           if (($buildmode == 'full' && $full) || ($buildmode='teaser' && $teaser)) {
-               $node->content['like_widget'] = array(
-                                '#markup' => like_jquery_widget($node, ($buildmode == 'teaser'), FALSE),
-                                '#weight' => (int) variable_get('like_weight', '100'),
-                                );
-          }
- 
+  if (in_array($node->type, variable_get('like_nodetypes', array('article')))) {
+    $teaser = variable_get('like_in_teaser', 0);
+    $full  = variable_get('like_in_full_view', 1);
+    if (($buildmode == 'full' && $full) || ($buildmode='teaser' && $teaser)) {
+      $node->content['like_widget'] = array(
+        '#markup' => like_jquery_widget($node, ($buildmode == 'teaser'), FALSE),
+        '#weight' => (int) variable_get('like_weight', '100'),
+      );
+    }
   }
 }
 

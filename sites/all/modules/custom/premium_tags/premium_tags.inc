@@ -77,7 +77,9 @@ function premium_tags_term_form($form, &$form_state, $user, $term = array()) {
     '#description' => t('A description of your tag.'),
   );
   if (module_exists('path')) {
-    $alias = path_load(array('source' => 'taxonomy/term/' . $term->tid));
+    if ($term) {
+      $alias = path_load(array('source' => 'taxonomy/term/' . $term->tid));
+    }
     $form['alias'] = array(
       '#type' => 'textfield',
       '#title' => t('URL Alias'),

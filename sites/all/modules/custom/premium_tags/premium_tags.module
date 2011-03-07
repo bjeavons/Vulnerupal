@@ -178,7 +178,7 @@ function premium_tags_form_alter(&$form, $form_state, $form_id) {
       $field_info = field_info_field($name);
       if ($field_info['type'] == 'taxonomy_term_reference' && isset($field_info['settings']['allowed_values'][0]['vocabulary'])) {
         $vocabulary = taxonomy_vocabulary_machine_name_load($field_info['settings']['allowed_values'][0]['vocabulary']);
-        if ($vocabulary->vid == $vid) {
+        if ($vocabulary && $vocabulary->vid == $vid) {
           if (user_access('create additional terms')) {
             // Limit form options.
             $tids = premium_tags_tids($form['uid']['#value']);

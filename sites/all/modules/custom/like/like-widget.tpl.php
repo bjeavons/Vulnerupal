@@ -10,7 +10,7 @@
     elseif ($variables['voted']) { ?>
       <?php echo $variables['like']['youvoted'];
     }
-    elseif (user_access('vote on content')) {
+    elseif (user_access('like content')) {
       /* The class name provided by Drupal.settings.like.link_class what we will search for in our jQuery later. */
      ?>
      <div class="like-vote"> <?php echo $variables['like']['linkvote'];?> </div>
