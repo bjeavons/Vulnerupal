@@ -1,0 +1,58 @@
+<?php
+
+
+function misc_block_info() {
+  $blocks['similar_designs'] = array(
+    'info' => t('Similar designs'), 
+  );
+  return $blocks;
+}
+
+function misc_block_view($name = '') {
+  $block = array();
+  if ($name == 'similar_designs' && arg(0) == 'taxonomy') {
+    $content = '';
+    $block['subject'] = 'Similar content';
+    $alias = drupal_get_path_alias();
+    $result = db_query("select * from node where title like '%$alias%' limit 10");
+    foreach ($result as $row) {
+      $links[] = $row;
+    }
+    if (!empty($links)) {
+      $content = '<ul>';
+      foreach ($links as $link) {
+        $content .= "<a href='node/$link->nid'>$link->title</a>";
+      }
+      $content .= '</ul>';
+    }
+    $content .= "<div><a href='similar/$alias'>See more</a></div>";
+    $block['content'] = $content;
+  }
+  return $block;
+}
+
+function misc_menu() {
+  $items['similar/%'] = array(
+    'page callback' => 'misc_similar_posts',
+    'page arguments' => array(1),
+    'access callback' => TRUE,
+  );
+  return $items;
+}
+
+function misc_similar_posts($tag) {
+  $content = "<h1>Similar designs to $tag</h1>";
+  $result = db_query("select * from node where title like '%$tag%'");
+  foreach ($result as $row) {
+    $links[] = $row;
+  }
+  if (!empty($links)) {
+    $content = '<ul>';
+    foreach ($links as $link) {
+      $content .= "<a href='node/$link->nid'>$link->title</a>";
+    }
+    $content .= '</ul>';
+  }
+
+  return $content;
+}
