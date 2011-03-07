@@ -1,3 +1,4 @@
 name = miscellaneous
-description = 
+description = misc
 core = 7.x
+files[] = misc.module

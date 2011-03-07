@@ -1,9 +1,8 @@
-name = Own Term
+name = Premium tags 
 description = "Users can create terms and assign to nodes."
 package = Other
 dependencies[] = taxonomy
 core = 7.x
-files[] = ownterm.inc
-files[] = ownterm.install
-files[] = ownterm.module
-files[] = ownterm_users.inc
+files[] = premium_tags.inc
+files[] = premium_tags.install
+files[] = premium_tags.module
