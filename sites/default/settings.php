@@ -444,4 +444,15 @@ ini_set('session.cookie_lifetime', 2000000);
  */
 # $conf['allow_authorize_operations'] = FALSE;
 
+$databases['default']['default'] = array(
+  'driver' => 'mysql',
+  'database' => 'databasename',   // <-- EDIT DATABASENAME
+  'username' => 'username',       // <-- EDIT USERNAME
+  'password' => 'password',       // <-- EDIT PASSWORD
+  'host' => 'localhost',
+  'prefix' => 'main_',
+  'collation' => 'utf8_general_ci',
+);
+
+// Optionally, set the database in settings.local.php.
 include_once('settings.local.php');

@@ -49,8 +49,7 @@ function premium_tags_menu() {
     'title' => 'Add tags',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('premium_tags_term_form', 1),
-    'access callback' => 'premium_tags_term_add_access',
-    'access arguments' => array(1),
+    'access arguments' => array('create additional terms'),
     'file' => 'premium_tags.inc',
     'type' => MENU_CALLBACK,
   );

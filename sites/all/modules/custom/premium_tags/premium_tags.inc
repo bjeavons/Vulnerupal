@@ -47,6 +47,7 @@ function _premium_tags_overview($user, $tids) {
       'href' => 'user/' . $user->uid . '/tags/edit/' . $tid,
     );
   }
+  $output .= l(t('Add tag'), 'user/' . $user->uid . '/tags/add');
   $output .= theme('links', array('links' => $terms));
 
   return $output;
